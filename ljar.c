@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
 #include <unistd.h>
 
 static const char *lockSuffix = ".lock";
@@ -55,7 +56,12 @@ static void attemptLock(const char *lockFileName)
 static void replaceCOptionWithU(char *argv[])
 {
     if (argv[1][0] == 'c')
-        argv[1][0] == 'u';
+        argv[1][0] = 'u';
+}
+
+static char *getDelegateProgramName(char *originalName)
+{
+    return "jar";
 }
 
 int main(int argc, char *argv[])
@@ -69,11 +75,11 @@ int main(int argc, char *argv[])
             attemptLock(lockFileName);
         else
             fprintf(stderr, "%s: warning: Could not determine lock file name, continueing without lock.\n", argv[0]);
-        if (access(archiveFileName, F_OK) != -1)
+        if (exists(archiveFileName))
             replaceCOptionWithU(argv);
     } else
         fprintf(stderr, "%s: warning: Could not determine archive file name, continueing without update magic and lock.\n", argv[0]);
-    argv[0]++;  // ljar -> jar, skip l prefix. That allows users to create hardlinks to other librarians, too.
+    argv[0] = getDelegateProgramName(argv[0]);
     execvp(argv[0], argv);
-    err(EXIT_FAILURE, NULL);
+    err(EXIT_FAILURE, "%s", argv[0]);
 }
