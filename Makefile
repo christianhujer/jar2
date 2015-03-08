@@ -45,7 +45,7 @@ indent:
 install: all
 	install -d $(BINDIR) $(MANDIR)/man1/
 	install -t $(BINDIR) $(PROGRAMNAME)
-	install -m 0644 -t $(MANDIR)/man1/ man/makehelp.1
+	install -m 0644 -t $(MANDIR)/man1/ man/ljar.1
 
 out:
 	mkdir $@
