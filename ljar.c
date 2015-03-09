@@ -38,12 +38,9 @@ static const char *getArchiveFileName(char *argv[])
     return NULL;
 }
 
-static const char *getLockFileName(char *argv[])
+static const char *getLockFileName(const char *archiveFileName)
 {
-    const char *archiveFileName = getArchiveFileName(argv);
-    if (archiveFileName)
-        return strdupcat(archiveFileName, lockSuffix);
-    return NULL;
+    return strdupcat(archiveFileName, lockSuffix);
 }
 
 static void attemptLock(const char *lockFileName)
@@ -53,10 +50,15 @@ static void attemptLock(const char *lockFileName)
         err(EXIT_FAILURE, NULL);
 }
 
-static void replaceCOptionWithU(char *argv[])
+static void setCorrectActionOption(const char *archiveFileName, char *argv[])
 {
-    if (argv[1][0] == 'c')
-        argv[1][0] = 'u';
+    if (exists(archiveFileName)) {
+        if (argv[1][0] == 'c')
+            argv[1][0] = 'u';
+    } else {
+        if (argv[1][0] == 'u')
+            argv[1][0] = 'c';
+    }
 }
 
 static char *getDelegateProgramName(char *originalName)
@@ -68,17 +70,12 @@ int main(int argc, char *argv[])
 {
     const char *archiveFileName = getArchiveFileName(argv);
     if (archiveFileName) {
-        // The sequence of locking and existence check matters.
+        // The sequence of locking (in attemptLock()) and existence check (in setCorrectActionOption()) matters.
         // The existence check needs to be after locking to prevent a TOCTOU race condition.
-        const char *lockFileName = getLockFileName(argv);
-        if (lockFileName)
-            attemptLock(lockFileName);
-        else
-            fprintf(stderr, "%s: warning: Could not determine lock file name, continueing without lock.\n", argv[0]);
-        if (exists(archiveFileName))
-            replaceCOptionWithU(argv);
+        attemptLock(getLockFileName(archiveFileName));
+        setCorrectActionOption(archiveFileName, argv);
     } else
-        fprintf(stderr, "%s: warning: Could not determine archive file name, continueing without update magic and lock.\n", argv[0]);
+        warnx("warning: Could not determine archive file name, continueing without update magic and lock.");
     argv[0] = getDelegateProgramName(argv[0]);
     execvp(argv[0], argv);
     err(EXIT_FAILURE, "%s", argv[0]);
